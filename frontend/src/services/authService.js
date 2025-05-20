@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// frontend/src/services/authService.js
 const API_URL = '/api/auth';
 
 const authService = {
@@ -29,16 +30,11 @@ const authService = {
 
   logout: async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        await axios.post(`${API_URL}/logout`, null, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
+      const response = await axios.post(`${API_URL}/logout`);
+      return response.data;
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
     }
   }
 };
