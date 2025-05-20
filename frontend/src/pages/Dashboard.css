@@ -1,0 +1,150 @@
+.dashboard-page {
+  padding: var(--spacing-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.dashboard-header h1 {
+  color: var(--primary-color);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.welcome-message {
+  color: var(--text-color-soft);
+  font-size: var(--font-size-sm);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.stat-card {
+  background-color: white;
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.stat-card h3 {
+  color: var(--text-color-soft);
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-sm);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--primary-color);
+}
+
+.recent-projects {
+  background-color: white;
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.recent-projects h2 {
+  color: var(--text-color);
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-lg);
+}
+
+.projects-list {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.project-card {
+  background-color: var(--sidebar-bg);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.project-header h3 {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.status-badge {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.status-badge.active {
+  background-color: #dcfce7;
+  color: #10b981;
+}
+
+.status-badge.completed {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-badge.in-progress {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.project-progress {
+  margin: var(--spacing-sm) 0;
+}
+
+.progress-bar {
+  background-color: var(--primary-100);
+  border-radius: var(--border-radius-md);
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background-color: var(--primary-color);
+  height: 100%;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: var(--font-size-sm);
+}
+
+.project-meta {
+  color: var(--text-color-soft);
+  font-size: var(--font-size-sm);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: var(--spacing-md);
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: var(--spacing-md);
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
