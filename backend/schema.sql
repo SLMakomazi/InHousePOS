@@ -135,13 +135,14 @@ CREATE TABLE documents (
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 
--- Insert default admin user
-INSERT INTO users (username, password, email, firstName, lastName, role) 
+-- Insert predefined admin user
+INSERT INTO users (username, password, email, firstName, lastName, role, status)
 VALUES (
-  'admin',
-  'admin',
-  'lutho.makomazi@gmail.com',
+  'admin',  
+  '$2a$10$MWYh8ABMCctK8/IWGGEXqOITVTqi.WqyRvJjVdXldeThaaWosIr7G', 
+  'lutho.makomazi@gmail.com', 
   'Siseko',
   'Makomazi',
-  'admin'
+  'admin',
+  'active'
 );
