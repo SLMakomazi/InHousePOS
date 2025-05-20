@@ -5,19 +5,35 @@ const config = require('../config/config');
 
 const authController = {
   async login(req, res) {
+    const { username, password } = req.body;
+    console.log('--- Login Attempt ---');
+    console.log('Received username:', username);
+    console.log('Received password (length):', password ? password.length : 'undefined/empty');
+
     try {
-      const { username, password } = req.body;
-      
       const user = await User.findByUsername(username);
+      console.log('User found in DB:', user ? { id: user.id, username: user.username, hasPassword: !!user.password } : null);
+
       if (!user) {
+        console.log('User not found in DB, sending 401.');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      if (!user.password) {
+        console.log('User found but has no password in DB (user.password is falsy), sending 401.');
+        return res.status(401).json({ message: 'Invalid credentials - user data issue' });
+      }
+      
+      console.log('Comparing received password with stored hash for user:', user.username);
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log('Password comparison result (isValidPassword):', isValidPassword);
+
       if (!isValidPassword) {
+        console.log('Password comparison failed, sending 401.');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
+      console.log('Login successful, generating token for user ID:', user.id);
       const token = jwt.sign(
         { userId: user.id },
         config.jwt.secret,
@@ -34,8 +50,8 @@ const authController = {
         }
       });
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error('Error during login execution:', error);
+      res.status(500).json({ message: 'Server error during login' });
     }
   },
 
