@@ -1,36 +1,52 @@
 .new-project-page {
-  padding: var(--spacing-lg);
-  max-width: 64rem; /* 1024px */
+  padding: 1rem;
+  max-width: 1200px;
   margin: 0 auto;
+  background-color: #f9fafb;
+  min-height: 100vh;
+  text-align: left;
 }
 
 .new-project-page h1 {
-  color: var(--primary-color);
-  margin: 0 0 var(--spacing-lg) 0;
-  text-align: center;
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-  font-weight: 700;
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .project-form {
-  background-color: #fff;
+  background: white;
   padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
 }
 
 .form-group {
   margin-bottom: 1.25rem;
-  position: relative;
+  text-align: left;
+  width: 100%;
 }
 
 .form-label {
   display: block;
+  margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 0.5rem;
+  text-align: left;
 }
 
 .form-input,
@@ -40,29 +56,15 @@
   padding: 0.625rem 0.875rem;
   padding-left: 2.5rem;
   font-size: 0.875rem;
-  line-height: 1.25rem;
+  line-height: 1.25;
   color: #111827;
   background-color: #fff;
   border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease-in-out;
+  border-radius: 0.375rem;
+  box-sizing: border-box;
+  text-align: left;
 }
 
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.form-input::placeholder,
-.form-textarea::placeholder {
-  color: #9ca3af;
-}
-
-/* Remove number input spinners */
 input[type='number'] {
   -moz-appearance: textfield;
 }
@@ -73,44 +75,115 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
 }
 
-.submit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.relative {
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+
+.absolute {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  padding: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  line-height: 1.25rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
+  border-radius: 0.375rem;
   cursor: pointer;
   border: none;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-primary {
   background-color: #4f46e5;
   color: white;
 }
 
-.submit-btn:hover:not(:disabled) {
+.btn-primary:hover {
   background-color: #4338ca;
 }
 
-.submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
 }
 
 .error-message {
-  color: #ef4444;
-  font-size: var(--font-size-sm);
-  margin-top: var(--spacing-xs);
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+  text-align: left;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .new-project-page {
-    padding: var(--spacing-md);
+.animate-spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
   }
   
-  .project-form {
-    padding: var(--spacing-md);
+  .form-group {
+    margin-bottom: 0;
   }
+}
+
+.col-span-2 {
+  grid-column: span 2;
+}
+
+.form-control {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+input[type="date"] {
+  position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
