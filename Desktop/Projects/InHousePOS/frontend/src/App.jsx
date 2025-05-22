@@ -13,9 +13,10 @@ import NewProject from './pages/NewProject';
 import ProjectDetails from './pages/ProjectDetails';
 import Contract from './pages/Contract';
 import Invoice from './pages/Invoice';
-import ContractsList from './pages/ContractsList';
+import ContractList from './pages/ContractList';
 import InvoicesList from './pages/InvoicesList';
 import Settings from './pages/Settings';
+import CreateContract from './pages/CreateContract';
 
 // Auth
 import { AuthProvider } from './context/AuthProvider';
@@ -34,7 +35,9 @@ function App() {
               <Route path="project/:id" element={<ProjectDetails />} />
               
               {/* Routes for general lists and specific items */}
-              <Route path="contracts" element={<ContractsList />} />
+              <Route path="contracts" element={<ContractList />} />
+              <Route path="contracts/new" element={<CreateContract />} />
+              <Route path="contracts/new/:projectId" element={<CreateContract />} />
               <Route path="contract/:id" element={<Contract />} />
               
               <Route path="invoices" element={<InvoicesList />} />

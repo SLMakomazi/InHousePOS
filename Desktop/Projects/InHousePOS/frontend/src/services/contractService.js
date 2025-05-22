@@ -1,22 +1,14 @@
-import axios from 'axios';
+
+import api from './api';
 
 // frontend/src/services/contractService.js
 const API_URL = '/api/contracts';
 
 const contractService = {
-  create: async (projectId, contractData) => {
+  // Get all contracts
+  async getAll() {
     try {
-      const response = await axios.post(`${API_URL}/${projectId}`, contractData);
-      return response.data;
-    } catch (error) {
-      console.error('Create contract error:', error);
-      throw error.response?.data?.message || 'Failed to create contract';
-    }
-  },
-
-  getAll: async () => {
-    try {
-      const response = await axios.get(API_URL);
+      const response = await api.get(API_URL);
       return response.data;
     } catch (error) {
       console.error('Get contracts error:', error);
@@ -24,9 +16,10 @@ const contractService = {
     }
   },
 
-  getById: async (id) => {
+  // Get single contract by ID
+  async getById(id) {
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      const response = await api.get(`${API_URL}/${id}`);
       return response.data;
     } catch (error) {
       console.error('Get contract error:', error);
@@ -34,9 +27,21 @@ const contractService = {
     }
   },
 
-  update: async (id, contractData) => {
+  // Create new contract
+  async create(projectId, contractData) {
     try {
-      const response = await axios.put(`${API_URL}/${id}`, contractData);
+      const response = await api.post(`${API_URL}/${projectId}`, contractData);
+      return response.data;
+    } catch (error) {
+      console.error('Create contract error:', error);
+      throw error.response?.data?.message || 'Failed to create contract';
+    }
+  },
+
+  // Update contract
+  async update(id, contractData) {
+    try {
+      const response = await api.put(`${API_URL}/${id}`, contractData);
       return response.data;
     } catch (error) {
       console.error('Update contract error:', error);
@@ -44,9 +49,10 @@ const contractService = {
     }
   },
 
-  delete: async (id) => {
+  // Delete contract
+  async delete(id) {
     try {
-      const response = await axios.delete(`${API_URL}/${id}`);
+      const response = await api.delete(`${API_URL}/${id}`);
       return response.data;
     } catch (error) {
       console.error('Delete contract error:', error);
@@ -54,9 +60,21 @@ const contractService = {
     }
   },
 
-  getPDF: async (id) => {
+  // Get contracts by project
+  async getContractsByProject(projectId) {
     try {
-      const response = await axios.get(`${API_URL}/${id}/pdf`, { responseType: 'blob' });
+      const response = await api.get(`/api/contracts/project/${projectId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching contracts for project ${projectId}:`, error);
+      throw error;
+    }
+  },
+
+  // Get contract PDF
+  async getPDF(id) {
+    try {
+      const response = await api.get(`${API_URL}/${id}/pdf`, { responseType: 'blob' });
       return response.data;
     } catch (error) {
       console.error('Get contract PDF error:', error);
@@ -64,9 +82,10 @@ const contractService = {
     }
   },
 
-  sendEmail: async (id, recipientEmail) => {
+  // Send contract email
+  async sendEmail(id, recipientEmail) {
     try {
-      const response = await axios.post(`${API_URL}/${id}/email`, { recipientEmail });
+      const response = await api.post(`${API_URL}/${id}/email`, { recipientEmail });
       return response.data;
     } catch (error) {
       console.error('Send contract email error:', error);
@@ -74,9 +93,10 @@ const contractService = {
     }
   },
 
-  approve: async (id) => {
+  // Approve contract
+  async approve(id) {
     try {
-      const response = await axios.post(`${API_URL}/${id}/approve`);
+      const response = await api.post(`${API_URL}/${id}/approve`);
       return response.data;
     } catch (error) {
       console.error('Approve contract error:', error);
@@ -84,9 +104,10 @@ const contractService = {
     }
   },
 
-  reject: async (id, reason) => {
+  // Reject contract
+  async reject(id, reason) {
     try {
-      const response = await axios.post(`${API_URL}/${id}/reject`, { reason });
+      const response = await api.post(`${API_URL}/${id}/reject`, { reason });
       return response.data;
     } catch (error) {
       console.error('Reject contract error:', error);
@@ -94,9 +115,10 @@ const contractService = {
     }
   },
 
-  getHistory: async (id) => {
+  // Get contract history
+  async getHistory(id) {
     try {
-      const response = await axios.get(`${API_URL}/${id}/history`);
+      const response = await api.get(`${API_URL}/${id}/history`);
       return response.data;
     } catch (error) {
       console.error('Get contract history error:', error);
