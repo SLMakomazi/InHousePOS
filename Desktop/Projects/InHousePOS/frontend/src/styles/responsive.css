@@ -1,0 +1,85 @@
+/* Responsive Breakpoints */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
+
+/* Mobile First */
+@media (min-width: var(--breakpoint-sm)) {
+  /* Small devices (tablets, 640px and up) */
+  .container {
+    padding-right: var(--spacing-lg);
+    padding-left: var(--spacing-lg);
+  }
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  /* Medium devices (desktops, 768px and up) */
+  .container {
+    padding-right: var(--spacing-xl);
+    padding-left: var(--spacing-xl);
+  }
+}
+
+@media (min-width: var(--breakpoint-lg)) {
+  /* Large devices (large desktops, 1024px and up) */
+  .container {
+    padding-right: var(--spacing-2xl);
+    padding-left: var(--spacing-2xl);
+  }
+}
+
+/* Utility Classes */
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: var(--breakpoint-sm)) {
+  .hidden-sm {
+    display: none !important;
+  }
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  .hidden-md {
+    display: none !important;
+  }
+}
+
+@media (min-width: var(--breakpoint-lg)) {
+  .hidden-lg {
+    display: none !important;
+  }
+}
+
+/* Flex Direction */
+.flex-column {
+  flex-direction: column;
+}
+
+@media (min-width: var(--breakpoint-sm)) {
+  .flex-column-sm {
+    flex-direction: column;
+  }
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  .flex-column-md {
+    flex-direction: column;
+  }
+}
+
+/* Grid */
+@media (min-width: var(--breakpoint-sm)) {
+  .grid-cols-2-sm {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  .grid-cols-3-md {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -1,0 +1,112 @@
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+:root {
+  /* Color Palette */
+  --text-color: #000000;       /* Updated to black */
+  --primary-color: #ffffff;    /* Updated to white */
+  --primary-50: #f0f9ff;
+  --primary-100: #e0f2fe;
+  --primary-600: #2563eb;
+  --background-color: #f8f9fa;    /* A very light gray for the main app background */
+  --sidebar-bg: #343a40;          /* A dark gray for the sidebar background */
+  --text-color-light: #ffffff;    /* White text, for use on dark backgrounds (like sidebar) */
+  --text-color-soft: #6c757d;     /* A softer gray for secondary text */
+  --sidebar-text-color: #f8f9fa;  /* Light text for the dark sidebar */
+  --sidebar-hover-bg: #495057;    /* Hover background for sidebar items */
+  --hover-bg-color: #f3f4f6;
+
+  /* Layout Dimensions */
+  --navbar-height: 90px; /* Increased from default 64px */
+
+  /* Typography */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem;  /* 8px */
+  --spacing-md: 1rem;    /* 16px */
+  --spacing-lg: 1.5rem;  /* 24px */
+  --spacing-xl: 2rem;    /* 32px */
+
+  /* Borders */
+  --border-radius-sm: 0.2rem;
+  --border-radius-md: 6px; /* Updated border radius */
+  --border-radius-lg: 8px; /* Updated border radius */
+  
+  /* Default styles from original :root, now that variables are defined */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: var(--font-weight-normal); /* Use variable */
+
+  color-scheme: light dark; /* Keep this if you plan to support OS-level dark mode preferences */
+  color: var(--text-color); /* Now uses defined variable */
+  background-color: var(--background-color); /* Now uses defined variable */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0; /* Ensure body has no margin */
+  /* padding: 0; */ /* Usually not needed for body unless specific case */
+  /* Consider removing display:flex and place-items:center if not needed for overall layout */
+  /* display: flex; */
+  /* place-items: center; */
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+}
+
+/* Ensure all text is black by default */
+body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, select, label {
+  color: var(--text-color);
+}
+
+/* Buttons */
+button {
+  color: var(--text-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+a {
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+/* Inputs */
+input, textarea, select {
+  color: var(--text-color);
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+}
+
+/* Remove default button styling */
+button, input[type="button"], input[type="submit"], input[type="reset"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
