@@ -82,6 +82,41 @@ const authController = {
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
+  },
+
+  async verifyToken(req, res) {
+    console.log('--- Verify Token Attempt ---');
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No token provided or not Bearer, sending isValid: false');
+      return res.status(401).json({ isValid: false, message: 'No token provided or malformed.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    console.log('Token received for verification (first 10 chars):', token ? token.substring(0, 10) + '...' : 'undefined');
+
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret);
+      console.log('Token successfully verified, decoded user ID:', decoded.userId);
+      
+      // Optional: You could fetch the user from DB here if you need to return more user details
+      // const user = await User.findById(decoded.userId);
+      // if (!user) {
+      //   return res.status(404).json({ isValid: false, message: 'User not found for token.' });
+      // }
+
+      res.json({ 
+        isValid: true, 
+        user: { // Send back minimal user info, or more if needed by frontend
+          id: decoded.userId 
+          // username: user.username, // if you fetch the user
+        } 
+      });
+    } catch (error) {
+      console.error('Token verification failed:', error.name, error.message);
+      res.status(401).json({ isValid: false, message: 'Token verification failed.' });
+    }
   }
 };
 
