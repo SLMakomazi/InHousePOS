@@ -4,32 +4,29 @@ const db = require('../config/db');
  * Middleware to set user ID and client information for contract history triggers
  * This should be used on routes that modify contracts
  */
-const setContractAuditInfo = (req, res, next) => {
-  // Get client IP address
-  const ip = req.headers['x-forwarded-for'] || 
-             req.connection.remoteAddress || 
-             req.socket.remoteAddress ||
-             (req.connection.socket ? req.connection.socket.remoteAddress : null);
+const setContractAuditInfo = async (req, res, next) => {
+  try {
+    // Get client IP address
+    const ip = req.headers['x-forwarded-for'] || 
+              req.connection.remoteAddress || 
+              req.socket.remoteAddress ||
+              (req.connection.socket ? req.connection.socket.remoteAddress : null);
 
-  // Get user agent
-  const userAgent = req.headers['user-agent'] || '';
+    // Get user agent
+    const userAgent = req.headers['user-agent'] || '';
+    const userId = req.user ? req.user.id : null;
 
-  // Set session variables for triggers
-  const setVarsQuery = `
-    SET @_user_id = ?;
-    SET @_client_ip = ?;
-    SET @_client_user_agent = ?;
-  `;
-
-  const userId = req.user ? req.user.id : null;
-
-  db.query(setVarsQuery, [userId, ip, userAgent], (error) => {
-    if (error) {
-      console.error('Error setting contract audit variables:', error);
-      // Don't fail the request, just log the error
-    }
+    // Execute each statement separately
+    await db.query('SET @_user_id = ?', [userId]);
+    await db.query('SET @_client_ip = ?', [ip]);
+    await db.query('SET @_client_user_agent = ?', [userAgent]);
+    
     next();
-  });
+  } catch (error) {
+    console.error('Error setting contract audit variables:', error);
+    // Don't fail the request, just log the error
+    next();
+  }
 };
 
 /**
@@ -80,43 +77,63 @@ const validateContractData = (req, res, next) => {
     title, 
     startDate, 
     endDate,
-    amount,
-    items
+    totalCost,
+    paymentSchedule
   } = req.body;
 
   const errors = [];
 
   // Required fields
   if (!contractNumber) errors.push('Contract number is required');
-  if (!title) errors.push('Title is required');
-  if (!startDate) errors.push('Start date is required');
+  
   
   // Date validation
+  if (startDate && isNaN(Date.parse(startDate))) {
+    errors.push('Start date must be a valid date');
+  }
+  
+  if (endDate && isNaN(Date.parse(endDate))) {
+    errors.push('End date must be a valid date');
+  }
+  
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
     errors.push('End date must be after start date');
   }
 
   // Amount validation
-  if (amount && isNaN(parseFloat(amount))) {
-    errors.push('Amount must be a valid number');
+  if (totalCost && isNaN(parseFloat(totalCost))) {
+    errors.push('Total cost must be a valid number');
   }
 
-  // Items validation
-  if (items && Array.isArray(items)) {
-    items.forEach((item, index) => {
-      if (!item.description) {
-        errors.push(`Item ${index + 1}: Description is required`);
+  // Payment schedule validation
+  if (paymentSchedule) {
+    try {
+      const { upfront, installments } = paymentSchedule;
+      
+      if (upfront) {
+        if (upfront.percentage && (isNaN(upfront.percentage) || upfront.percentage < 0 || upfront.percentage > 100)) {
+          errors.push('Upfront percentage must be between 0 and 100');
+        }
+        if (upfront.amount && isNaN(parseFloat(upfront.amount))) {
+          errors.push('Upfront amount must be a valid number');
+        }
       }
-      if (item.quantity && isNaN(parseFloat(item.quantity))) {
-        errors.push(`Item ${index + 1}: Quantity must be a valid number`);
+      
+      if (installments) {
+        if (installments.count && (isNaN(parseInt(installments.count)) || installments.count < 0)) {
+          errors.push('Number of installments must be a positive number');
+        }
+        if (installments.amount && isNaN(parseFloat(installments.amount))) {
+          errors.push('Installment amount must be a valid number');
+        }
       }
-      if (item.unitPrice && isNaN(parseFloat(item.unitPrice))) {
-        errors.push(`Item ${index + 1}: Unit price must be a valid number`);
-      }
-    });
+    } catch (error) {
+      errors.push('Invalid payment schedule format');
+    }
   }
 
   if (errors.length > 0) {
+    console.error('Contract validation errors:', errors);
     return res.status(400).json({ 
       message: 'Validation failed', 
       errors 

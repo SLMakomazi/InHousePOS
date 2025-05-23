@@ -105,21 +105,31 @@ const getByClientId = async (req, res) => {
 const create = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { projectId } = req.params;
-  const { 
-    contract_number, 
-    title, 
-    description, 
-    start_date, 
-    end_date, 
-    status, 
-    total_amount, 
-    terms, 
-    notes, 
-    items 
+  const userId = req.user?.id; // Use optional chaining in case req.user is undefined
+  
+  console.log('Creating contract for project:', projectId, 'by user:', userId);
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+  const {
+    contractNumber,
+    title,
+    description,
+    effectiveDate,
+    startDate = effectiveDate, // Fallback to effectiveDate if startDate is not provided
+    endDate,
+    status = 'draft',
+    totalCost,
+    clientName,
+    clientEmail,
+    clientContact,
+    clientAddress,
+    paymentSchedule,
+    additionalTerms = ''
   } = req.body;
 
   const connection = await db.getConnection();
@@ -127,46 +137,73 @@ const create = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // Insert contract
+    // Log the table structure for debugging
+    const [tableInfo] = await connection.query('DESCRIBE contracts');
+    console.log('Contracts table structure:', tableInfo);
+
+    // Get project details
+    const [project] = await connection.query(
+      'SELECT * FROM projects WHERE id = ?',
+      [projectId]
+    );
+
+    if (!project || !project.length) {
+      console.error('Project not found with ID:', projectId);
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    console.log('Found project:', project[0].name);
+
+    // Log the data we're trying to insert
+    const contractData = {
+      projectId,
+      userId,
+      contractNumber,
+      projectName: title || `Contract for ${project[0].name}`,
+      clientName: clientName || project[0].clientName || '',
+      clientEmail: clientEmail || project[0].clientEmail || '',
+      termsAndConditions: additionalTerms,
+      status,
+      amount: totalCost || project[0].budget || 0,
+      paymentSchedule: paymentSchedule ? JSON.stringify(paymentSchedule) : '{}'
+    };
+    console.log('Contract data to insert:', contractData);
+
+    // Insert contract using dynamic column names based on the table structure
+    const columns = [
+      'projectId', 'userId', 'contractNumber', 'projectName',
+      'clientName', 'clientEmail', 'termsAndConditions', 'status',
+      'amount', 'paymentSchedule'
+    ].join(', ');
+    
+    const placeholders = columns.split(', ').map(() => '?').join(', ');
+    
     const [result] = await connection.query(
-      `INSERT INTO contracts (
-        projectId, contract_number, title, description, 
-        start_date, end_date, status, total_amount, terms, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO contracts (${columns}, createdAt, updatedAt) 
+       VALUES (${placeholders}, NOW(), NOW())`,
       [
-        projectId, contract_number, title, description,
-        start_date, end_date, status || 'draft', 
-        total_amount || 0, terms || '', notes || ''
+        contractData.projectId,
+        contractData.userId,
+        contractData.contractNumber,
+        contractData.projectName,
+        contractData.clientName,
+        contractData.clientEmail,
+        contractData.termsAndConditions,
+        contractData.status,
+        contractData.amount,
+        contractData.paymentSchedule
       ]
     );
 
     const contractId = result.insertId;
+    console.log('Created contract with ID:', contractId);
 
-    // Insert contract items if any
-    if (items && items.length > 0) {
-      const itemValues = items.map(item => [
-        contractId,
-        item.description,
-        item.quantity || 1,
-        item.unit_price || 0,
-        item.total || 0,
-        item.notes || ''
-      ]);
-
-      await connection.query(
-        `INSERT INTO contract_items 
-        (contract_id, description, quantity, unit_price, total, notes)
-        VALUES ?`,
-        [itemValues]
-      );
-    }
-
-
+    // No need to update projects table as the relationship is maintained by projectId in contracts
+    
     await connection.commit();
     
     // Fetch the created contract with all its data
-    const [newContract] = await db.query(
-      `SELECT c.*, p.name as project_name, CONCAT(u.firstName, ' ', u.lastName) as client_name 
+    const [newContract] = await connection.query(
+      `SELECT c.*, p.name as project_name, CONCAT(u.firstName, ' ', u.lastName) as client_contact 
        FROM contracts c
        LEFT JOIN projects p ON c.projectId = p.id
        LEFT JOIN users u ON p.userId = u.id
@@ -174,13 +211,24 @@ const create = async (req, res) => {
       [contractId]
     );
 
+    if (!newContract || newContract.length === 0) {
+      throw new Error('Failed to fetch created contract');
+    }
+
+    console.log('Successfully created contract:', newContract[0]);
     res.status(201).json(newContract[0]);
   } catch (error) {
     await connection.rollback();
     console.error('Error creating contract:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Failed to create contract',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   } finally {
-    connection.release();
+    if (connection && typeof connection.release === 'function') {
+      connection.release();
+    }
   }
 };
 

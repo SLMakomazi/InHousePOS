@@ -32,19 +32,19 @@ router.get('/client/:clientId', contractController.getByClientId);
 // @access  Private
 router.get('/:id', checkContractAccess, contractController.getById);
 
-// @route   POST /api/contracts
+// @route   POST /api/contracts/:projectId
 // @desc    Create a new contract
 // @access  Private
 router.post(
-  '/',
-  setContractAuditInfo,
+  '/:projectId',
+  auth, 
+  setContractAuditInfo, 
   [
     check('contractNumber', 'Contract number is required').not().isEmpty(),
-    check('title', 'Title is required').not().isEmpty(),
-    check('startDate', 'Start date is required').isISO8601(),
-    check('endDate', 'End date must be a valid date').optional({ checkFalsy: true }).isISO8601(),
-    check('clientId', 'Client ID is required').isInt(),
-    check('projectId', 'Project ID is required').isInt(),
+    check('title', 'Title is required').optional(),
+    check('startDate', 'Start date is required').optional().isISO8601(),
+    check('endDate', 'End date must be a valid date').optional().isISO8601(),
+    check('totalCost', 'Total cost must be a valid number').optional().isNumeric(),
     validateContractData
   ],
   contractController.create

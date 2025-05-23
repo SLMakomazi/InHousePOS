@@ -18,7 +18,7 @@ const CreateContract = () => {
     projectDescription: '',
     totalCost: '',
     paymentSchedule: {
-      upfront: { percentage: 40 },
+      upfront: { percentage: 40, amount: 0 },
       installments: { count: 3, amount: 0 }
     },
     additionalTerms: ''
@@ -61,6 +61,10 @@ const CreateContract = () => {
           totalCost: project.budget || '',
           paymentSchedule: {
             ...prev.paymentSchedule,
+            upfront: { 
+              ...prev.paymentSchedule.upfront,
+              amount: project.budget ? (project.budget * 0.4) : 0 
+            },
             installments: {
               ...prev.paymentSchedule.installments,
               amount: project.budget ? (project.budget * 0.6) / 3 : 0
@@ -104,21 +108,101 @@ const CreateContract = () => {
     }));
   };
 
+  const handleProjectSelect = async (e) => {
+    const selectedProjectId = e.target.value;
+    if (!selectedProjectId) return;
+    
+    try {
+      const project = await projectService.getProjectById(selectedProjectId);
+      setFormData(prev => ({
+        ...prev,
+        projectId: project.id,
+        clientName: project.clientName || '',
+        projectName: project.name || '',
+        projectDescription: project.description || '',
+        totalCost: project.budget || '',
+        paymentSchedule: {
+          ...prev.paymentSchedule,
+          upfront: { 
+            ...prev.paymentSchedule.upfront,
+            amount: project.budget ? (project.budget * 0.4) : 0 
+          },
+          installments: {
+            ...prev.paymentSchedule.installments,
+            amount: project.budget ? (project.budget * 0.6) / 3 : 0
+          }
+        }
+      }));
+    } catch (err) {
+      console.error('Error fetching project details:', err);
+      setError('Failed to load project details');
+    }
+  };
+
+  useEffect(() => {
+    if (formData.totalCost) {
+      const total = parseFloat(formData.totalCost);
+      const upfrontAmount = total * 0.4; // Fixed 40% upfront
+      const remainingAmount = total - upfrontAmount;
+      const installmentAmount = remainingAmount / (formData.paymentSchedule.installments.count || 1);
+
+      setFormData(prev => ({
+        ...prev,
+        paymentSchedule: {
+          ...prev.paymentSchedule,
+          upfront: { 
+            ...prev.paymentSchedule.upfront,
+            amount: upfrontAmount 
+          },
+          installments: {
+            ...prev.paymentSchedule.installments,
+            amount: parseFloat(installmentAmount.toFixed(2))
+          }
+        }
+      }));
+    }
+  }, [formData.totalCost, formData.paymentSchedule.installments.count]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    
     try {
-      // Format the contract content using the template
-      const contractContent = {
-        ...formData,
-        createdAt: new Date().toISOString(),
+      const contractData = {
+        contractNumber: formData.contractNumber,
+        title: formData.projectName || 'Project Contract',
+        description: formData.projectDescription || '',
+        clientName: formData.clientName,
+        clientEmail: formData.clientEmail || '',
+        clientPhone: formData.clientPhone || '',
+        clientAddress: formData.clientAddress || '',
+        effectiveDate: formData.effectiveDate,
+        startDate: formData.effectiveDate,
+        totalCost: parseFloat(formData.totalCost) || 0,
+        paymentSchedule: {
+          upfront: {
+            percentage: 40,
+            amount: parseFloat(formData.paymentSchedule.upfront.amount) || 0
+          },
+          installments: {
+            count: parseInt(formData.paymentSchedule.installments.count) || 0,
+            amount: parseFloat(formData.paymentSchedule.installments.amount) || 0
+          }
+        },
+        additionalTerms: formData.additionalTerms || '',
         status: 'draft'
       };
       
-      await contractService.create(contractContent);
+      await contractService.create(formData.projectId, contractData);
+      
+      // Show success message and navigate to contracts list
+      alert('Contract created successfully!');
       navigate('/contracts');
-    } catch (err) {
-      setError('Failed to create contract');
-      console.error('Error creating contract:', err);
+    } catch (error) {
+      console.error('Error creating contract:', error);
+      setError(error.message || 'Failed to create contract');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,7 +252,7 @@ const CreateContract = () => {
                   id="projectId"
                   name="projectId"
                   value={formData.projectId}
-                  onChange={handleChange}
+                  onChange={handleProjectSelect}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   required
                 >
@@ -223,7 +307,10 @@ const CreateContract = () => {
                 name="clientName"
                 value={formData.clientName}
                 onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                readOnly={!!formData.projectId}
+                className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  formData.projectId ? 'bg-gray-100' : ''
+                }`}
                 required
               />
             </div>
@@ -238,7 +325,10 @@ const CreateContract = () => {
                 name="projectName"
                 value={formData.projectName}
                 onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                readOnly={!!formData.projectId}
+                className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  formData.projectId ? 'bg-gray-100' : ''
+                }`}
                 required
               />
             </div>
@@ -253,7 +343,10 @@ const CreateContract = () => {
                 rows="3"
                 value={formData.projectDescription}
                 onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                readOnly={!!formData.projectId}
+                className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  formData.projectId ? 'bg-gray-100' : ''
+                }`}
                 required
               />
             </div>
@@ -287,19 +380,19 @@ const CreateContract = () => {
               <div className="space-y-4">
                 <div>
                   <label htmlFor="upfront.percentage" className="block text-sm font-medium text-gray-700">
-                    Upfront Payment (%)
+                    Upfront Payment (40%)
                   </label>
                   <input
                     type="number"
                     id="upfront.percentage"
                     name="upfront.percentage"
-                    value={formData.paymentSchedule.upfront.percentage}
-                    onChange={handlePaymentScheduleChange}
-                    min="0"
-                    max="100"
-                    className="mt-1 block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    required
+                    value={40}
+                    readOnly
+                    className="mt-1 block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Amount: R{formData.paymentSchedule.upfront.amount?.toFixed(2) || '0.00'}
+                  </p>
                 </div>
 
                 <div>
@@ -312,10 +405,13 @@ const CreateContract = () => {
                     name="installments.count"
                     value={formData.paymentSchedule.installments.count}
                     onChange={handlePaymentScheduleChange}
-                    min="0"
+                    min="1"
                     className="mt-1 block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     required
                   />
+                  <p className="mt-1 text-sm text-gray-500">
+                    {formData.paymentSchedule.installments.count} payments of R{formData.paymentSchedule.installments.amount?.toFixed(2) || '0.00'}
+                  </p>
                 </div>
               </div>
             </div>
