@@ -59,7 +59,7 @@ const Projects = () => {
   };
 
   const handleCreateProject = () => {
-    navigate('/projects/new');
+    navigate('/new-project');
   };
 
   const handleViewProject = (id) => {

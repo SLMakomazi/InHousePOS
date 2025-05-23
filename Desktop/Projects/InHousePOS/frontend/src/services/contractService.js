@@ -71,13 +71,56 @@ const contractService = {
   },
 
   // Get contract PDF
-  async getPDF(id) {
+  async getPDF(id, config = {}) {
     try {
-      const response = await api.get(`${API_URL}/${id}/pdf`, { responseType: 'blob' });
-      return response.data;
+      // Default configuration
+      const defaultConfig = {
+        responseType: 'blob',
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      };
+
+      // Merge with provided config
+      const finalConfig = { ...defaultConfig, ...config };
+
+      const response = await api.get(`${API_URL}/${id}/pdf`, finalConfig);
+      
+      // If the response is a blob, return it directly
+      if (response.data instanceof Blob) {
+        return response;
+      }
+      
+      // If we get JSON but expected a blob, it's probably an error
+      if (typeof response.data === 'object' && response.data !== null) {
+        throw new Error(response.data.message || 'Failed to generate PDF');
+      }
+      
+      // For any other case, create a blob from the response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      return { ...response, data: blob };
+      
     } catch (error) {
       console.error('Get contract PDF error:', error);
-      throw error.response?.data?.message || 'Failed to fetch contract PDF';
+      
+      // Handle blob error responses
+      if (error.response?.data instanceof Blob) {
+        try {
+          const errorText = await error.response.data.text();
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || 'Failed to fetch contract PDF');
+        }catch (error) {
+          // If we can't parse the error, throw a generic error
+          console.error('Failed to process PDF download', error);
+        }
+      }
+      
+      // For non-blob errors
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to fetch contract PDF'
+      );
     }
   },
 

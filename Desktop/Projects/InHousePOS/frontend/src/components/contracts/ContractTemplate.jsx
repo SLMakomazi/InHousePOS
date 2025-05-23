@@ -8,7 +8,6 @@ const ContractTemplate = ({
   projectDescription,
   totalCost,
   paymentSchedule,
-  additionalTerms = ''
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -113,7 +112,7 @@ const ContractTemplate = ({
 
           <div>
             <h4 className="font-semibold border-b border-gray-300 pb-1 mb-2">Developer Signature</h4>
-            <div className="mb-2">[Your Company Name]</div>
+            <div className="mb-2">[Calvin Tech Solutions]</div>
             <div className="mt-6">
               <div className="border-t border-gray-400 pt-1">Signature: ______________________</div>
               <div className="mt-2">Date: ___________________________</div>

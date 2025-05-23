@@ -247,7 +247,7 @@ const ContractList = () => {
                     <td>
                       <Link to={`/contracts/${contract.id}`} className="contract-link">
                         <FiExternalLink className="link-icon" />
-                        {contract.contractNumber || 'N/A'}
+                        {contract.contractNumber || `CONTRACT-${String(contract.id).padStart(6, '0')}`}
                       </Link>
                     </td>
                     <td>{project?.name || 'N/A'}</td>
@@ -271,6 +271,9 @@ const ContractList = () => {
                         to={`/contracts/${contract.id}/edit`}
                         className="action-btn edit-btn"
                         title="Edit contract"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click when clicking edit
+                        }}
                       >
                         <FiEdit2 />
                       </Link>

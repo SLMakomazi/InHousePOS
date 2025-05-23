@@ -26,12 +26,9 @@ const getAll = async (req, res) => {
 // @access  Private
 const getById = async (req, res) => {
   try {
+    // First, get basic contract info
     const [contract] = await db.query(
-      `SELECT c.*, p.name as project_name, CONCAT(u.firstName, ' ', u.lastName) as client_name 
-       FROM contracts c
-       LEFT JOIN projects p ON c.projectId = p.id
-       LEFT JOIN users u ON p.userId = u.id
-       WHERE c.id = ?`,
+      `SELECT * FROM contracts WHERE id = ?`,
       [req.params.id]
     );
 
@@ -39,19 +36,70 @@ const getById = async (req, res) => {
       return res.status(404).json({ message: 'Contract not found' });
     }
 
-    // Get contract items if any
-    const [items] = await db.query(
-      'SELECT * FROM contract_items WHERE contract_id = ?',
-      [req.params.id]
-    );
+    // Get project details if projectId exists
+    let project = null;
+    if (contract[0].projectId) {
+      const [projectData] = await db.query(
+        'SELECT * FROM projects WHERE id = ?',
+        [contract[0].projectId]
+      );
+      project = projectData[0];
+    }
 
-    res.json({
-      ...contract[0],
-      items: items || []
-    });
+    // Get client details if clientId exists
+    let client = null;
+    if (contract[0].clientId) {
+      const [clientData] = await db.query(
+        'SELECT * FROM users WHERE id = ?',
+        [contract[0].clientId]
+      );
+      client = clientData[0];
+    }
+
+    // Format the response
+    const response = {
+      id: contract[0].id,
+      contractNumber: contract[0].contractNumber || `CONTRACT-${String(contract[0].id).padStart(6, '0')}`,
+      title: contract[0].title || contract[0].projectName || 'Contract',
+      description: contract[0].description || contract[0].projectDescription || '',
+      effectiveDate: contract[0].effectiveDate || contract[0].createdAt,
+      startDate: contract[0].startDate || contract[0].effectiveDate || contract[0].createdAt,
+      endDate: contract[0].endDate,
+      status: contract[0].status || 'draft',
+      totalCost: contract[0].totalCost || contract[0].totalAmount || 0,
+      clientName: contract[0].clientName || (client ? `${client.firstName} ${client.lastName}` : 'N/A'),
+      clientEmail: contract[0].clientEmail || (client ? client.email : ''),
+      clientPhone: contract[0].clientPhone || contract[0].clientContact || (client ? client.phone : ''),
+      clientAddress: contract[0].clientAddress || (client ? client.address : ''),
+      paymentSchedule: contract[0].paymentSchedule 
+        ? (typeof contract[0].paymentSchedule === 'string' 
+            ? JSON.parse(contract[0].paymentSchedule) 
+            : contract[0].paymentSchedule)
+        : {
+            upfront: { percentage: 0, amount: 0 },
+            installments: { count: 0, amount: 0 }
+          },
+      additionalTerms: contract[0].additionalTerms || contract[0].termsAndConditions || '',
+      createdAt: contract[0].createdAt,
+      updatedAt: contract[0].updatedAt,
+      project: project ? {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        budget: project.budget
+      } : null
+    };
+
+    res.json(response);
   } catch (error) {
     console.error('Error fetching contract:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -238,21 +286,26 @@ const create = async (req, res) => {
 const update = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { id } = req.params;
   const { 
-    contract_number, 
-    title, 
-    description, 
-    start_date, 
-    end_date, 
-    status, 
-    total_amount, 
-    terms, 
-    notes, 
-    items 
+    contractNumber,
+    title,
+    description,
+    clientName,
+    clientEmail,
+    clientPhone,
+    clientAddress,
+    effectiveDate,
+    startDate = effectiveDate,
+    endDate,
+    status = 'draft',
+    totalCost,
+    paymentSchedule,
+    additionalTerms = ''
   } = req.body;
 
   const connection = await db.getConnection();
@@ -260,73 +313,65 @@ const update = async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    console.log('Updating contract with data:', JSON.stringify(req.body, null, 2));
+
     // Update contract
     await connection.query(
       `UPDATE contracts SET
-        contract_number = ?,
-        title = ?,
-        description = ?,
-        start_date = ?,
-        end_date = ?,
+        contractNumber = ?,
+        projectName = ?,
+        clientName = ?,
+        clientEmail = ?,
+        clientPhone = ?,
+        clientAddress = ?,
+        effectiveDate = ?,
+        startDate = ?,
+        endDate = ?,
         status = ?,
-        total_amount = ?,
-        terms = ?,
-        notes = ?,
-        updated_at = NOW()
+        totalCost = ?,
+        paymentSchedule = ?,
+        additionalTerms = ?,
+        updatedAt = NOW()
       WHERE id = ?`,
       [
-        contract_number,
-        title,
-        description,
-        start_date,
-        end_date,
+        contractNumber,
+        title, // Using title as projectName
+        clientName,
+        clientEmail || null,
+        clientPhone || null,
+        clientAddress || null,
+        effectiveDate,
+        startDate,
+        endDate || null,
         status,
-        total_amount || 0,
-        terms || '',
-        notes || '',
+        totalCost || 0,
+        JSON.stringify(paymentSchedule) || null,
+        additionalTerms,
         id
       ]
     );
-
-    // Delete existing items and insert new ones
-    await connection.query('DELETE FROM contract_items WHERE contract_id = ?', [id]);
-
-    if (items && items.length > 0) {
-      const itemValues = items.map(item => [
-        id,
-        item.description,
-        item.quantity || 1,
-        item.unit_price || 0,
-        item.total || 0,
-        item.notes || ''
-      ]);
-
-      await connection.query(
-        `INSERT INTO contract_items 
-        (contract_id, description, quantity, unit_price, total, notes)
-        VALUES ?`,
-        [itemValues]
-      );
-    }
-
 
     await connection.commit();
     
     // Fetch the updated contract with all its data
     const [updatedContract] = await connection.query(
-      `SELECT c.*, p.name as project_name, CONCAT(u.firstName, ' ', u.lastName) as client_name 
-       FROM contracts c
-       LEFT JOIN projects p ON c.projectId = p.id
-       LEFT JOIN users u ON p.userId = u.id
-       WHERE c.id = ?`,
+      'SELECT * FROM contracts WHERE id = ?',
       [id]
     );
+
+    if (!updatedContract || updatedContract.length === 0) {
+      throw new Error('Failed to fetch updated contract');
+    }
 
     res.json(updatedContract[0]);
   } catch (error) {
     await connection.rollback();
     console.error('Error updating contract:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   } finally {
     connection.release();
   }
@@ -355,57 +400,204 @@ const deleteContract = async (req, res) => {
 // @access  Private
 const getPDF = async (req, res) => {
   try {
-    const [contract] = await db.query(
-      `SELECT c.*, p.name as project_name, CONCAT(u.firstName, ' ', u.lastName) as client_name,
-       u.email as client_email, u.phone as client_phone,
-       u.address as client_address
-       FROM contracts c
-       LEFT JOIN projects p ON c.projectId = p.id
-       LEFT JOIN users u ON p.userId = u.id
-       WHERE c.id = ?`,
-      [req.params.id]
-    );
-
-    if (contract.length === 0) {
-      return res.status(404).json({ message: 'Contract not found' });
+    if (!req.params.id) {
+      return res.status(400).json({ message: 'Contract ID is required' });
     }
 
-    // Get contract items
-    const [items] = await db.query(
-      'SELECT * FROM contract_items WHERE contract_id = ?',
-      [req.params.id]
-    );
+    console.log(`Generating PDF for contract ID: ${req.params.id}`);
 
-    // In a real application, you would use a PDF generation library like pdfkit or puppeteer
-    // This is a simplified example that returns a text representation
-    const contractData = {
-      ...contract[0],
-      items: items || []
-    };
+    // Get contract data with user and project details
+    const [contracts] = await db.query(`
+        SELECT 
+          c.*,
+          p.name as projectName,
+          p.description as projectDescription,
+          p.clientName as projectClientName,
+          p.clientEmail as projectClientEmail,
+          p.clientContact as clientPhone,
+          p.startDate as projectStartDate,
+          p.endDate as projectEndDate,
+          CONCAT(u.firstName, ' ', u.lastName) as developerName,
+          u.email as developerEmail
+        FROM contracts c
+        LEFT JOIN projects p ON c.projectId = p.id
+        LEFT JOIN users u ON p.userId = u.id
+        WHERE c.id = ?
+      `, [req.params.id]);
 
-    // For now, we'll just return the JSON data
-    // In a real app, you would generate a PDF and send it
-    res.setHeader('Content-Type', 'application/json');
-    res.send(JSON.stringify(contractData, null, 2));
+      if (!contracts || contracts.length === 0) {
+        console.log('Contract not found');
+        return res.status(404).json({ message: 'Contract not found' });
+      }
+
+      const contractData = contracts[0];
+      console.log('Contract data:', JSON.stringify(contractData, null, 2));
+
+      // Initialize PDF document
+      const PDFDocument = require('pdfkit');
+      const doc = new PDFDocument({ margin: 50 });
+
+      try {
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=contract-${contractData.contractNumber}.pdf`);
+        
+        // Pipe the PDF to the response
+        doc.pipe(res);
+
+        // Add header
+        doc.fontSize(20).text('DEVELOPMENT SERVICES AGREEMENT', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(14).text(`Contract #${contractData.contractNumber}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Contract introduction - FIXED VERSION
+        doc.fontSize(12).text(
+          `This Contract Agreement ("Agreement") is entered into on ${new Date(contractData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} ` +
+          '("Effective Date") by and between Calvin Tech Solutions ("Developer") and ' +
+          `${contractData.clientName} ("Client") ` +
+          `for the development and deployment of the ${contractData.projectName} ("Project").`,
+          { align: 'left', lineGap: 8 }
+        );
+        doc.moveDown(2);
+
+        // 1. Scope of Work
+        doc.fontSize(14).text('1. Scope of Work', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(12).text(
+          `The Developer agrees to design, develop, and deploy the Project, including ${contractData.projectName} ` +
+          `with ${contractData.projectDescription || 'all specified features'}, ` +
+          `as outlined in the proposal dated ${new Date(contractData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+        );
+        doc.moveDown(1);
+
+      // 2. Payment Terms
+  doc.fontSize(14).text('2. Payment Terms', { underline: true });
+  doc.moveDown(0.5);
+  doc.fontSize(12);
+
+  try {
+    // Ensure amount is a number
+    const totalAmount = parseFloat(contractData.amount) || 0;
     
-    // Example of how you might generate a PDF (commented out as it requires additional setup):
-    /*
-    const doc = new PDFDocument();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=contract-${contract[0].contract_number || contract[0].id}.pdf`);
-    doc.pipe(res);
+    // Parse payment schedule or use defaults
+    const paymentSchedule = contractData.paymentSchedule 
+      ? JSON.parse(contractData.paymentSchedule)
+      : { 
+          upfront: { percentage: 0, amount: 0 }, 
+          installments: [] 
+        };
+
+    // Total Project Cost
+    doc.text(`Total Project Cost: R ${totalAmount.toFixed(2)}`);
     
-    // Add content to the PDF
-    doc.fontSize(20).text(`Contract #${contract[0].contract_number || contract[0].id}`, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(14).text(`Client: ${contract[0].client_name}`);
-    // ... more PDF content ...
+    // Upfront Payment
+    if (paymentSchedule.upfront?.percentage > 0) {
+      const upfrontAmount = paymentSchedule.upfront.amount || 
+                          (totalAmount * paymentSchedule.upfront.percentage) / 100;
+      doc.text(`Upfront Payment: ${paymentSchedule.upfront.percentage}% of R ${totalAmount.toFixed(2)} = R ${upfrontAmount.toFixed(2)} (due upon signing of this Agreement)`);
+    }
     
-    doc.end();
-    */
+    // Installments
+    if (paymentSchedule.installments?.length > 0) {
+      doc.moveDown(0.5);
+      doc.text('Installment Payments:');
+      paymentSchedule.installments.forEach((installment, index) => {
+        const dueDate = installment.dueDate 
+          ? new Date(installment.dueDate).toLocaleDateString()
+          : 'TBD';
+        const amount = parseFloat(installment.amount) || 0;
+        doc.text(`  ${index + 1}. R ${amount.toFixed(2)} due on ${dueDate}`, { indent: 20 });
+      });
+    }
+
+    // Calculate and show total payments
+    const totalPayments = paymentSchedule.installments?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0) + 
+                        (paymentSchedule.upfront?.amount || 0);
+    
+    if (Math.abs(totalPayments - totalAmount) > 0.01) { // Account for floating point precision
+      doc.moveDown(0.5);
+      doc.font('Helvetica-Bold').text(`Total Payments: R ${totalPayments.toFixed(2)}`, { indent: 20 });
+      doc.font('Helvetica');
+    }
+
+  } catch (e) {
+    console.error('Error parsing payment schedule:', e);
+    doc.text('Payment terms: Could not load payment schedule');
+  }
+  doc.moveDown(1);
+
+      // 3. Intellectual Property
+      doc.fontSize(14).text('3. Intellectual Property', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(
+        'The Developer retains ownership of the intellectual property rights to the Project, including any custom code, designs, ' +
+        'and other creative works. The Client is granted a non-exclusive license to use the Project for their business purposes.'
+      );
+      doc.moveDown(1);
+
+      // 4. Maintenance and Support
+      doc.fontSize(14).text('4. Maintenance and Support', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(
+        'The Developer may offer optional maintenance and support services, including updates, upgrades, and technical support, for an additional fee.'
+      );
+      doc.moveDown(1);
+
+      // 5. Termination
+      doc.fontSize(14).text('5. Termination', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(
+        'Either party may terminate this Agreement upon written notice to the other party. ' +
+        'Upon termination, the Client shall pay the Developer for all work completed prior to termination.'
+      );
+      doc.moveDown(1);
+
+      // 6. Governing Law
+      doc.fontSize(14).text('6. Governing Law', { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(12).text('This Agreement shall be governed by and construed in accordance with the laws of South Africa.');
+      doc.moveDown(2);
+
+      // Signatures section
+      doc.fontSize(12).text(
+        'By signing below, the parties acknowledge that they have read, understand, and agree to be bound by the terms and conditions of this Agreement.'
+      );
+      doc.moveDown(3);
+
+      // Client Signature
+      doc.text('Client Signature', { align: 'left' });
+      doc.fontSize(12).text(contractData.clientName, { align: 'left' });
+      doc.text('_________________________', { align: 'left' });
+      doc.text('Date: _________________', { align: 'left' });
+      doc.moveDown(3);
+
+      // Developer Signature
+      doc.text('Developer Signature', { align: 'left' });
+      doc.fontSize(12).text('Calvin Tech Solutions', { align: 'left' });
+      doc.text('_________________________', { align: 'left' });
+      doc.text('Date: _________________', { align: 'left' });
+
+      // Finalize the PDF
+      doc.end();
+    } catch (pdfError) {
+      console.error('PDF generation error:', pdfError);
+      if (!res.headersSent) {
+        return res.status(500).json({ 
+          message: 'Failed to generate PDF',
+          error: pdfError.message
+        });
+      }
+    }
   } catch (error) {
-    console.error('Error generating contract PDF:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in getPDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: 'Server error',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
   }
 };
 
